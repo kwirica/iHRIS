@@ -5,7 +5,53 @@
 
 ## Requirements
 
-The Docker approach requires Docker for Mac, Linux, or Windows. On Linux, docker-compose must also be installed.
+The Docker approach requires Docker for Mac, Linux, or Windows. On Linux, docker-compose must also be installed. TO run iHRIS in Docker currently, you have to be running *Version 24.0.5*
+
+Installing Docker and Docker Compose:
+
+Docker Version 24.0.5:
+
+To install Docker version 24.0.5, you may need to use a specific package manager or download the Docker binaries directly from Docker's website.
+You can download Docker version 24.0.5 from the Docker GitHub releases page: Docker GitHub Releases
+Once downloaded, follow the installation instructions provided for your operating system.
+Docker Compose Version 1.29.2-1:
+
+Docker Compose version 1.29.2-1 can be installed using the following command:
+bash
+Copy code
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+This command downloads the Docker Compose binary and makes it executable.
+Increasing Docker Memory Allocation:
+
+For Docker Desktop (Mac/Windows):
+
+Open Docker Desktop.
+Go to Preferences > Resources > Advanced.
+Adjust the memory slider to allocate at least 4GB of RAM to Docker.
+Click Apply & Restart to apply the changes.
+For Docker on Linux:
+
+Edit the Docker configuration file (typically located at /etc/docker/daemon.json) using a text editor:
+bash
+Copy code
+sudo nano /etc/docker/daemon.json
+Add or modify the "default" section to set the desired memory limit. For example:
+json
+Copy code
+{
+  "default": {
+    "memory": 4294967296
+  }
+}
+Save the file and exit the text editor.
+Restart the Docker service to apply the changes:
+bash
+Copy code
+sudo systemctl restart docker
+Ensure that your system meets the minimum requirements for Docker and iHRIS, especially in terms of CPU and disk space.
+
+
 
 Memory dedicated to Docker should be increased to 4GB or more. This is a snapshot of memory usage with demo records and no dashboards. iHRIS, Redis, and Postgres use very minimal RAM, compared to Kibana (552MiB), ElasticSearch (846MiB), and HAPI FHIR Server (821MiB).
 
