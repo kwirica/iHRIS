@@ -143,7 +143,7 @@ export default {
   name: "fhir-reference",
   props: ["field","label","sliceName","targetProfile","targetResource","min","max","base-min","base-max",
     "slotProps","path","sub-fields","edit","readOnlyIfSet","constraints", "displayType", 
-    "initialValue", "overrideValue", "displayCondition", "searchParameter", "initialProfile", "allowedProfiles", "pageTargetProfile",
+    "initialValue", "overrideValue", "displayCondition", "enableBehavior", "searchParameter", "initialProfile", "allowedProfiles", "pageTargetProfile",
     "report", "reportReturnValue", "referenceDisplayPath", "initial"],
   components: {
     IhrisElement,
@@ -185,7 +185,7 @@ export default {
       })
     })
     //this function is defined under dataDisplay mixin
-    this.hideShowField(this.displayCondition)
+    this.hideShowField(this.displayCondition, this.enableBehavior)
     this.setupData()
     if(this.displayType === "preloaded") {
       this.querySelections()
@@ -370,8 +370,8 @@ export default {
         if ( treetop ) {
           params = { searchparam : treetop }
         } else if(!treetop) {
-          params[searchparam + ":missing"] = true
           if(this.initialProfile) {
+            console.log("initialProfile - ",this.initialProfile)
             params['_profile'] = this.initialProfile
           } else if(this.allowedProfiles) {
             params['_profile'] = this.allowedProfiles
@@ -675,7 +675,7 @@ export default {
     },
     rules: function() {
       if ( this.required ) {
-        return [ v => !!v || this.display+" is required" ]
+        return [ v => !!v || this.$t(`App.fhir-resources-texts.${this.display}`)+" " + this.$t(`App.hardcoded-texts.is required`) ]
       } else {
         return []
       }

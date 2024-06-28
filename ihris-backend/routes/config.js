@@ -326,6 +326,7 @@ router.get('/page/:page/:type?', function (req, res) {
             for (let section of pageSections) {
                 let title, description, name, sectionEmptyDisplay, resourceExt, resource, linkfield, searchfield, searchfieldtarget
                 let fields = []
+                let hide = []
                 let columns = []
                 let actions = []
                 try {
@@ -343,6 +344,10 @@ router.get('/page/:page/:type?', function (req, res) {
                 sectionEmptyDisplay = section.extension.find(ext => ext.url === "emptyDisplay")?.valueBoolean
                 try {
                     fields = section.extension.filter(ext => ext.url === "field").map(ext => ext.valueString)
+                } catch (err) {
+                }
+                try {
+                    hide = section.extension.filter(ext => ext.url === "hide").map(ext => ext.valueString)
                 } catch (err) {
                 }
                 let allowed = req.user.hasPermissionByName("special", "section", name)
@@ -444,6 +449,7 @@ router.get('/page/:page/:type?', function (req, res) {
                     description: description,
                     emptyDisplay: sectionEmptyDisplay,
                     fields: fields,
+                    hide: hide,
                     order: sectionOrder,
                     resource: resource,
                     linkfield: linkfield,
@@ -488,6 +494,7 @@ router.get('/page/:page/:type?', function (req, res) {
                         description: "",
                         emptyDisplay: false,
                         fields: [],
+                        hide: [],
                         order: {},
                         resource: undefined,
                         linkfield: undefined,
@@ -534,13 +541,16 @@ router.get('/page/:page/:type?', function (req, res) {
                         }
                     }
                 }
-                const processFields = async (fields, base, order) => {
+                const processFields = async (fields, base, order, hide) => {
                     let output = ""
                     let fieldKeys = Object.keys(fields)
                     if (order[base]) {
                         fieldKeys.sort(getSortFunc(order[base]))
                     }
                     for (let field of fieldKeys) {
+                        if(fields[field].id && (hide.includes(fields[field].id))) {
+                            continue
+                        }
                         if (fields[field]["max"] === "0") {
                             continue
                         }
@@ -686,7 +696,7 @@ router.get('/page/:page/:type?', function (req, res) {
 
                         if (!subFields && fields[field].hasOwnProperty("fields")) {
                             output += "<template #default=\"slotProps\">\n"
-                            output += await processFields(fields[field].fields, base + "." + fields[field], order)
+                            output += await processFields(fields[field].fields, base + "." + fields[field], order, hide)
                             output += "</template>\n"
                         }
                         output += "</fhir-" + eleName + ">\n"
@@ -721,7 +731,7 @@ router.get('/page/:page/:type?', function (req, res) {
                             let sectionKey = getUKey()
                             allColumns[sectionKey] = sections[name].columns
                             allActions[sectionKey] = sections[name].actions
-                            let dateFormat = (nconf.get("defaults:components:ihris-secondary:date-format")) ? ' "dateFormat="' + nconf.get("defaults:components:ihris-secondary:date-format")  : ''
+                            let dateFormat = (nconf.get("defaults:components:ihris-secondary:date-format")) ? '" dateFormat="' + nconf.get("defaults:components:ihris-secondary:date-format")  : ''
                             vueOutput += '<ihris-secondary :edit="isEdit" :link-id="fhirId" profile="' + secondary.url
                                 + '" field="' + second_fhir
                                 + '" title="' + sections[name].title
@@ -738,7 +748,7 @@ router.get('/page/:page/:type?', function (req, res) {
                         }
 
                     } else {
-                        vueOutput += await processFields(sections[name].elements, fhir, sections[name].order)
+                        vueOutput += await processFields(sections[name].elements, fhir, sections[name].order, sections[name].hide)
                     }
                     vueOutput += "</template></ihris-section>\n"
                 }
@@ -961,7 +971,6 @@ router.get('/questionnaire/:questionnaire/:page', async function (req, res) {
         let displayCondition = ''
         if(qItem.enableWhen) {
             for(let when of qItem.enableWhen) {
-                displayCondition = ''
                 const condKeys = Object.keys(when)
                 let answKeyInd = condKeys.findIndex((cond) => {
                     return cond.startsWith('answer')
@@ -981,6 +990,17 @@ router.get('/questionnaire/:questionnaire/:page', async function (req, res) {
             }
         }
         return displayCondition
+    }
+    function getContentTypes(qItem) {
+        let contentTypes = []
+        if(qItem.code) {
+            qItem.code.forEach(codeItem => {
+                if (codeItem.system === "attachment-format") {
+                    contentTypes.push(codeItem.code);
+                }
+              });
+              return contentTypes;
+        }
     }
     await fhirAxios.read("Basic", page).then(async(resource) => {
         let pageDisplay = resource.extension.find(ext => ext.url === "http://ihris.org/fhir/StructureDefinition/ihris-page-display")
@@ -1137,6 +1157,8 @@ router.get('/questionnaire/:questionnaire/:page', async function (req, res) {
             let vueOutput = ""
             for (let item of items) {
                 let displayCondition = getDisplayCondition(item)
+                let contentTypes = getContentTypes(item)
+                let enableBehavior = item.enableBehavior
                 let displayType
                 if (item.linkId.includes('#') && item.type !== 'group') {
                     let linkDetails = item.linkId.split('#')
@@ -1184,6 +1206,9 @@ router.get('/questionnaire/:questionnaire/:page', async function (req, res) {
                 if (itemType === "group") {
                     let label = item.text.split('|', 2)
                     vueOutput += '<ihris-questionnaire-group :slotProps="slotProps" :edit=\"isEdit\" path="' + item.linkId + '" label="' + label[0] + '" displayCondition="' + displayCondition + '"'
+                    if(item.enableBehavior) {
+                        vueOutput += ' enableBehavior="' + item.enableBehavior + '"'
+                    }
                     if(!isLimitSet) {
                         vueOutput += ' limit="' + limit + '"'
                         isLimitSet = true
@@ -1358,6 +1383,13 @@ router.get('/questionnaire/:questionnaire/:page', async function (req, res) {
                         }
                     }
                     vueOutput += "<fhir-" + itemType + " field=\"" + itemFieldPath + "\"" + " :slotProps=\"slotProps\" :edit=\"isEdit\" path=\"" + item.linkId + "\"" + "displayCondition=\"" + displayCondition + "\""
+                    if(enableBehavior) {
+                        vueOutput += ' enableBehavior="' + enableBehavior + '"'
+                    }
+                    //if(contentTypes.length > 0) {
+                    if(contentTypes) {
+                        vueOutput += ' contentTypes="' + contentTypes.join(",") + '"'
+                    }
                     if(item.initial && item.initial.length) {
                         let answVal = Object.keys(item.initial[0])[0]
                         if(answVal) {
@@ -1554,6 +1586,9 @@ router.get('/questionnaire/:questionnaire/:page', async function (req, res) {
                 }
                 let label = item.text.split('|', 2)
                 vueOutput += '<ihris-questionnaire-section :slotProps="slotProps" id="' + sectionId + '" path="' + item.linkId + '" label="' + label[0] + '" displayCondition="' + displayCondition + '"'
+                if(item.enableBehavior) {
+                    vueOutput += ' enableBehavior="' + item.enableBehavior + '"'
+                }
                 if (label.length === 2) {
                     vueOutput += ' description="' + label[1] + '"'
                 }

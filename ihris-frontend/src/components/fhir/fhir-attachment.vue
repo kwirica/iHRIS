@@ -72,7 +72,7 @@ import { dataDisplay } from "@/mixins/dataDisplay"
 export default {
   name: "fhir-attachment",
   props: ["field", "label", "min", "max", "id", "path", "slotProps", "sliceName","base-min","base-max","edit","readOnlyIfSet",
-    "constraints", "displayCondition", "initial", "maxValueAttachment"],
+    "constraints", "displayCondition", "enableBehavior", "initial", "maxValueAttachment", "contentTypes"],
   components: {
     IhrisElement
   },
@@ -97,7 +97,7 @@ export default {
     }
     this.maxUpload = this.humanReadableToBytes(this.maxValueAttachment);
     //this function is defined under dataDisplay mixin
-    this.hideShowField(this.displayCondition)
+    this.hideShowField(this.displayCondition, this.enableBehavior)
     this.setupData()
   },
   watch: {
@@ -189,7 +189,14 @@ export default {
           this.loading = false
           return
         }
-        this.value.contentType = this.upload.type
+        if ( this.contentTypes && !this.contentTypes.includes( this.upload.type ) ) {
+          this.errors.push(this.display+" is not of the correct type")
+          this.loading = false
+          return
+        } else {
+          this.value.contentType = this.upload.type
+        }
+        //this.value.contentType = this.upload.type
         this.value.title = this.upload.name
         let reader = new FileReader()
         reader.readAsArrayBuffer( this.upload )
@@ -240,9 +247,9 @@ export default {
     },
     rules: function() {
       if ( this.required ) {
-        return [ v => !!v || this.display+" is required" ]
+        return [ v => !!v || this.$t(`App.fhir-resources-texts.${this.display}`)+" " + this.$t(`App.hardcoded-texts.is required`) ]
       } else {
-        return [ v => !v || !v.length || v[0].size < this.maxUpload || this.display+" is more than "+ this.maxValueAttachment ]
+        return [ v => !v || !v.length || v[0].size < this.maxUpload || this.$t(`App.fhir-resources-texts.${this.display}`)+" " + this.$t(`App.hardcoded-texts.is more than`) + " " + this.maxValueAttachment ]
       }
     }
   }
