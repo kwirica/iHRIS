@@ -11,6 +11,7 @@
         :rules="rules" 
         dense
         @change='doUpload'
+        :accept="attachmentTypes"
         :error-messages="errors"
       >
         <template #label>{{$t(`App.fhir-resources-texts.${display}`)}} <span v-if="required" class="red--text font-weight-bold">*</span></template>
@@ -72,7 +73,7 @@ import { dataDisplay } from "@/mixins/dataDisplay"
 export default {
   name: "fhir-attachment",
   props: ["field", "label", "min", "max", "id", "path", "slotProps", "sliceName","base-min","base-max","edit","readOnlyIfSet",
-    "constraints", "displayCondition", "enableBehavior", "initial", "maxValueAttachment", "contentTypes"],
+    "constraints", "displayCondition", "enableBehavior", "initial", "maxValueAttachment", "attachment-types"],
   components: {
     IhrisElement
   },
@@ -189,14 +190,7 @@ export default {
           this.loading = false
           return
         }
-        if ( this.contentTypes && !this.contentTypes.includes( this.upload.type ) ) {
-          this.errors.push(this.display+" is not of the correct type")
-          this.loading = false
-          return
-        } else {
-          this.value.contentType = this.upload.type
-        }
-        //this.value.contentType = this.upload.type
+        this.value.contentType = this.upload.type
         this.value.title = this.upload.name
         let reader = new FileReader()
         reader.readAsArrayBuffer( this.upload )
