@@ -371,7 +371,6 @@ export default {
           params = { searchparam : treetop }
         } else if(!treetop) {
           if(this.initialProfile) {
-            console.log("initialProfile - ",this.initialProfile)
             params['_profile'] = this.initialProfile
           } else if(this.allowedProfiles) {
             params['_profile'] = this.allowedProfiles
@@ -520,7 +519,7 @@ export default {
           targetProfile = [this.pageTargetProfile]
         }
         if ( !targetProfile[0].endsWith( this.resource ) ) {
-          params._profile = targetProfile
+          params._profile = targetProfile.join(",")
         }
         url = "/fhir/"+this.resource
         if(Object.keys(params).length > 0) {
